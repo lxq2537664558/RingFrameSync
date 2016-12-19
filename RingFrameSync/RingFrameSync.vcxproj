@@ -78,12 +78,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Complex.c" />
     <ClCompile Include="FrameSync.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="Ring.c" />
     <ClCompile Include="Stack.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Complex.h" />
     <ClInclude Include="FrameSync.h" />
     <ClInclude Include="Ring.h" />
     <ClInclude Include="Stack.h" />

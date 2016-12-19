@@ -2,7 +2,7 @@
 #include "Ring.h"
 #include "Stack.h"
 #include <assert.h>
-
+#include "Complex.h"
 
 
 struct FrameSyncPara MainPara;
@@ -45,6 +45,9 @@ char RunFrameSync(struct Complex *DataIn)
 	long long PowerIn, PowerOut, DiffPower;
 	struct Complex Tmp;
 
+	struct LComplex Ltmp0, Ltmp1;
+	long long CenterValue, CorrA,CorrB;
+	struct LComplex Ltmp;
 
 	while (DataInLen >= MainPara.DataRq) //只要数据够，则一直执行下去
 	{
@@ -54,26 +57,35 @@ char RunFrameSync(struct Complex *DataIn)
 		switch (Mode)
 		{
 		case DATA:
-			//1.先把同步多余的数据发送 
-
-
-			//2.再直接发送其余数据并计数 
-			for (i = 0; i < MainPara.DataRq; i++)
+			if (MainPara.OutEnable)
 			{
+				//1.先把同步多余的数据发送 
 
-			}
-			//3.最后256个数据同步记录,之后更新所有状态
-			if (MainPara.DataCnt >= 308 * 128 - MainPara.BackWriteLen)
-			{
-				for (i = 0; i < MainPara.BackWriteLen; i++)
+
+				//2.再直接发送其余数据并计数 
+				for (i = 0; i < MainPara.DataRq; i++)
 				{
-					HistoryData[i] = DataIn[i];
-					//输出到OuterBuff
+
 				}
-				MainPara.DataRq = 1664 - MainPara.BackWriteLen;
-				MainPara.DataCnt = 0;
-				MainPara.Status = INITIAL;
+				//3.最后256个数据同步记录,之后更新所有状态
+				if (MainPara.DataCnt >= 308 * 128 - MainPara.BackWriteLen)
+				{
+					for (i = 0; i < MainPara.BackWriteLen; i++)
+					{
+						HistoryData[i] = DataIn[i];
+						//输出到OuterBuff
+					}
+					MainPara.DataRq = 1664 - MainPara.BackWriteLen;
+					MainPara.DataCnt = 0;
+					MainPara.Status = INITIAL;
+				}
 			}
+			else
+			{
+				//用最快速度方法直接丢弃数据，并计数
+				//最后256个数据仍然需要保存在HistoryData中
+			}
+
 			break;
 		case INITIAL:
 			//1. 先把最后HistoryData中256个数据存入
@@ -175,31 +187,80 @@ char RunFrameSync(struct Complex *DataIn)
 			if (MainPara.RankBios < 256)
 			{
 				StatPara.DelayCorrTime++;
-				if (StatPara.DelayCorrTime > 3)
+				if (StatPara.DelayCorrTime > 3) //延迟相关成功了
 				{
 					MainPara.Status = LOCK;
+					BackTo(pBuff, MainPara.RankBios + 128); //对齐,并返回128个
 				}
 			}
 			else
 			{
 				StatPara.DelayCorrTime = 0;
 			}
-			
+			MainPara.RankBios = 0;
 			break;
 		case LOCK:
 			//1. 直接调用中心对称相关，应该也是在差不多的地方同步上
-			//2. 连续16次同步不上，则返回DELAYWORK
+			for (i = 0; i < MainPara.DataRq; i++)
+			{
+				CorrA = 0;
+				for (i = 0; i < 512; i++)
+				{
+					pt0 = pBuff->front + i;
+					if (pt0 > pBuff->MaxSize - 1)
+					{
+						pt0 -= pBuff->MaxSize;
+					}
+					pt1 = pBuff->front + 1087 + i;
+					if (pt1 > pBuff->MaxSize - 1)
+					{
+						pt1 -= pBuff->MaxSize;
+					}
+					Ltmp0.Re = pBuff->BaseDataAddr[pt0].Re;
+					Ltmp0.Im = pBuff->BaseDataAddr[pt0].Im;
+					Ltmp1.Re = pBuff->BaseDataAddr[pt1].Re;
+					Ltmp1.Im = pBuff->BaseDataAddr[pt1].Im;
+					int multi = Ltmp0 * Ltmp1;
+					CorrA += multi;
+				}
+				CorrB = 0;
+				for (i = 0; i < 256; i++)
+				{
+					pt0 = pBuff->front + 576 + i;
+					if (pt0 > pBuff->MaxSize - 1)
+					{
+						pt0 -= pBuff->MaxSize;
+					}
+					pt1 = pBuff->front + 1407 + i;
+					if (pt1 > pBuff->MaxSize - 1)
+					{
+						pt1 -= pBuff->MaxSize;
+					}
+					Ltmp0.Re = pBuff->BaseDataAddr[pt0].Re;
+					Ltmp0.Im = pBuff->BaseDataAddr[pt0].Im;
+					Ltmp1.Re = pBuff->BaseDataAddr[pt1].Re;
+					Ltmp1.Im = pBuff->BaseDataAddr[pt1].Im;
+					int multi = Ltmp0 * Ltmp1;
+					CorrB += multi;
+				}
+				Ltmp = CorrA + CorrB; //得到中心对称相关值
+				CenterValue = Mod(Ltmp);
+
+				//2. 连续16次同步不上，则返回DELAYWORK
+			}
+			
+
 			break;
 		default:
 			break;
 		}
 	}
-
-
+	return 0;
 }
 
 char StopFrameSync()
 {
+	DestoryRing(pBuff);
 	return 0;
 }
 
@@ -236,5 +297,3 @@ static int Mod(struct Complex Data)
 		return Max + Addr;
 	}
 }
-
-int PeakValue;

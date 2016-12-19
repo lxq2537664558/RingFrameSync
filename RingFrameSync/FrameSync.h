@@ -3,12 +3,13 @@
 
 typedef int FrameType;
 
-struct Complex
-{
-	int Re;
-	int Im;
-};
 
+
+struct LComplex
+{
+	long long Re;
+	long long Im;
+};
 
 
 

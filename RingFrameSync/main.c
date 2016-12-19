@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "FrameSync.h"
+//#include "FrameSync.h"
 
 int main()
 {

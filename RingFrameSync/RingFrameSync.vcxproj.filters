@@ -24,6 +24,9 @@
     <ClCompile Include="Stack.c">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Complex.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="FrameSync.c">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -33,6 +36,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Ring.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Complex.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="FrameSync.h">
